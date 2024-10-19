@@ -34,7 +34,7 @@ class InputSection(BoxLayout):
                 hint_text=f'Input {i}',
                 multiline=False,
                 size_hint_y=None,
-                height=40,
+                height=30,
                 background_color=(0.9, 0.9, 0.9, 1),  # Light gray
                 foreground_color=(0, 0, 0, 1)  # Black text
             )
