@@ -98,6 +98,10 @@ class ResultScreen(Screen):
 
 
 class MyApp(App):
+    def __init__(self, **kwargs):
+        super(MyApp, self).__init__(**kwargs)
+        self.title = "Kamala Chicken"  # Set your app name here
+
     def build(self):
         sm = ScreenManager()
         sm.add_widget(InputScreen(name='input'))
