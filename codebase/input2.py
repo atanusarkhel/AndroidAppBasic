@@ -6,6 +6,7 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
+from kivy.core.window import Window
 
 
 class InputScreen(Screen):
@@ -20,11 +21,12 @@ class InputScreen(Screen):
         layout.bind(minimum_height=layout.setter('height'))
 
         # Dynamically creating input boxes and labels
-        for i in range(5):  # Example of creating multiple inputs
+        for i in range(3):  # Example of creating multiple inputs
             label = Label(text=f'Input {i + 1}', size_hint_y=None, height=40)
             layout.add_widget(label)
             self.labels.append(label.text)  # Store each label text
             input_box = TextInput(size_hint_y=None, height=40)
+            #input_box.bind(on_key_down=self.on_key_down)  # Bind key down event
             layout.add_widget(input_box)
             self.input_boxes.append(input_box)  # Store each TextInput in the list
 
@@ -35,6 +37,14 @@ class InputScreen(Screen):
 
         scrollview.add_widget(layout)
         self.add_widget(scrollview)
+
+    def on_key_down(self, instance, keyboard, keycode, text, modifiers):
+        if keycode[1] in ('tab', 'enter'):  # Check if Tab or Enter is pressed
+            next_index = self.input_boxes.index(instance) + 1  # Get index of current input box
+            if next_index < len(self.input_boxes):  # Ensure it's within range
+                self.input_boxes[next_index].focus = True  # Focus the next input box
+                return True  # Prevent the default behavior
+        return False  # Allow default behavior for other keys
 
     def on_submit(self, instance):
         # Retrieve values from all input boxes
@@ -85,6 +95,9 @@ class ResultScreen(Screen):
 
 
 class MyApp(App):
+    def __init__(self, **kwargs):
+        super(MyApp, self).__init__(**kwargs)
+        self.title = "Kamala Chicken Stores"
     def build(self):
         sm = ScreenManager()
         sm.add_widget(InputScreen(name='input'))
