@@ -1,4 +1,5 @@
 import datetime
+import os
 
 from kivy.app import App
 from kivy.uix.scrollview import ScrollView
@@ -42,8 +43,9 @@ class InputScreen(Screen):
 
     def on_submit(self, instance):
         # Retrieve values from all input boxes
-        self.collected_values = [input_box.text for input_box in self.input_boxes]
+        self.collected_values = [input_box.text.strip() for input_box in self.input_boxes]
         self.save_inputs(self.collected_values)
+        self.calculate(self.collected_values)
         # Access the ResultScreen and update its label text with labels and collected values
         result_screen = self.manager.get_screen('result')
         result_screen.display_values(self.labels, self.collected_values)
@@ -51,12 +53,18 @@ class InputScreen(Screen):
         # Switch to ResultScreen
         self.manager.current = 'result'
 
+    def calculate(self,list_data):
+        pass
+
     def save_inputs(self, data):
+        # Create directory if it doesn't exist
+        if not os.path.exists('kcs_data'):
+            os.makedirs('kcs_data')
+
         # Write to a file
-        file_name=f'kcs_data/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.txt'
+        file_name = f'kcs_data/{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.txt'
         with open(file_name, "w") as f:
-            f.write(f'  - {data}\n')
-            f.write('\n')
+            f.write(f'Inputs: {data}\n')
 
 class ResultScreen(Screen):
     def __init__(self, **kwargs):
