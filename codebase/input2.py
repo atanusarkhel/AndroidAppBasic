@@ -44,19 +44,27 @@ class InputScreen(Screen):
     def on_submit(self, instance):
         # Retrieve values from all input boxes
         self.collected_values = [input_box.text.strip() for input_box in self.input_boxes]
-        self.save_inputs(self.collected_values)
-        self.calculate(self.collected_values)
+
+        calculated_value_list=self.calculate(self.collected_values)
+
+        self.save_inputs(self.collected_values,calculated_value_list)
         # Access the ResultScreen and update its label text with labels and collected values
         result_screen = self.manager.get_screen('result')
-        result_screen.display_values(self.labels, self.collected_values)
+        #result_screen.display_values(self.labels, self.collected_values)
+        result_screen.display_values(calculated_value_list)
 
         # Switch to ResultScreen
         self.manager.current = 'result'
 
     def calculate(self,list_data):
-        pass
+        final_dataset={}
+        today_total_Sales_kg=(float(list_data[0])+float(list_data[1]))-float(list_data[2])
+        
+        final_dataset['total_Sales']=today_total_Sales_kg
 
-    def save_inputs(self, data):
+        return final_dataset
+
+    def save_inputs(self, input_data,output_data):
         # Create directory if it doesn't exist
         if not os.path.exists('kcs_data'):
             os.makedirs('kcs_data')
@@ -64,7 +72,8 @@ class InputScreen(Screen):
         # Write to a file
         file_name = f'kcs_data/{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.txt'
         with open(file_name, "w") as f:
-            f.write(f'Inputs: {data}\n')
+            f.write(f'Inputs: {input_data}\n')
+            f.write(f'output: {output_data}\n')
 
 class ResultScreen(Screen):
     def __init__(self, **kwargs):
@@ -88,12 +97,13 @@ class ResultScreen(Screen):
         outer_layout.add_widget(back_button)
         self.add_widget(outer_layout)
 
-    def display_values(self, labels, values):
+    #def display_values(self, labels, values):
+    def display_values(self, output_data):
         # Clear previous results
         self.result_layout.clear_widgets()
 
         # Add "Hello World" label
-        hello_label = Label(text="Hello World", size_hint_y=None, height=40)
+        hello_label = Label(text="Total summary for today", size_hint_y=None, height=40)
         self.result_layout.add_widget(hello_label)
 
         # Add the current date to the layout
@@ -101,9 +111,14 @@ class ResultScreen(Screen):
         self.result_layout.add_widget(date_label)
 
         # Add each label and value to the result layout
+        '''
         for label, value in zip(labels, values):
             result_label = Label(text=f"{label}: {value}", size_hint_y=None, height=40)
             self.result_layout.add_widget(result_label)
+        '''
+        for key in output_data:
+            output_result_label=Label(text=f"{key}: {output_data[key]}", size_hint_y=None, height=40)
+            self.result_layout.add_widget(output_result_label)
 
     def go_back(self, instance):
         # Switch back to the InputScreen
