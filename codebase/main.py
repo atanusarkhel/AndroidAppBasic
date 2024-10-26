@@ -1,126 +1,140 @@
+import datetime
+import os
+
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.textinput import TextInput
+from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.screenmanager import ScreenManager, Screen
-from kivy.uix.scrollview import ScrollView
+from kivy.uix.boxlayout import BoxLayout
 from kivy.core.window import Window
 
-# Set the window size for better appearance on desktop
-Window.size = (400, 600)
-
-class InputSection(BoxLayout):
-    def __init__(self, heading, **kwargs):
-        super(InputSection, self).__init__(orientation='vertical', **kwargs)
-        self.padding = (10, 10)
-        self.spacing = 5
-
-        # Heading label
-        heading_label = Label(
-            text=heading,
-            size_hint_y=None,
-            height=40,
-            color=(1, 1, 1, 1),  # White color
-            font_size='20sp',
-            bold=True
-        )
-        self.add_widget(heading_label)
-
-        # Create three input boxes with specific names
-        self.input_boxes = []
-        for i in range(1, 4):
-            input_name = f'Input Field {heading[-1]}-{i}'  # Unique name for each input
-            input_box = TextInput(
-                hint_text=input_name,
-                multiline=False,
-                size_hint_y=None,
-                height=40,
-                background_color=(0.9, 0.9, 0.9, 1),  # Light gray
-                foreground_color=(0, 0, 0, 1)  # Black text
-            )
-            self.input_boxes.append(input_box)
-            self.add_widget(input_box)
-
-    def get_inputs(self):
-        # Gather all input values
-        return [input_box.text for input_box in self.input_boxes]
 
 class InputScreen(Screen):
     def __init__(self, **kwargs):
-        super(InputScreen, self).__init__(**kwargs)
+        super().__init__(**kwargs)
+        self.input_boxes = []  # List to store input box references
+        self.labels = []  # List to store labels for input fields
 
-        # Create a layout for the screen
-        layout = BoxLayout(orientation='vertical', padding=10)
+        # Scrollable container
+        scrollview = ScrollView()
+        layout = GridLayout(cols=1, spacing=10, size_hint_y=None)
+        layout.bind(minimum_height=layout.setter('height'))
 
-        # Create a ScrollView to hold sections
-        scroll_view = ScrollView()
-        scroll_layout = BoxLayout(orientation='vertical', size_hint_y=None)
-        scroll_layout.bind(minimum_height=scroll_layout.setter('height'))
-
-        # Create five sections
-        self.sections = []
-        for i in range(1, 6):
-            section = InputSection(f'Section {i}')
-            self.sections.append(section)
-            scroll_layout.add_widget(section)
-
-        # Set the height of scroll_layout based on the number of sections
-        scroll_layout.height = (40 + (3 * 40) + 10) * 5  # Total height for 5 sections
-
-        scroll_view.add_widget(scroll_layout)
-        layout.add_widget(scroll_view)
+        # Dynamically creating input boxes and labels
+        for i in range(3):  # Example of creating multiple inputs
+            label = Label(text=f'Input {i + 1}', size_hint_y=None, height=40)
+            layout.add_widget(label)
+            self.labels.append(label.text)  # Store each label text
+            input_box = TextInput(size_hint_y=None, height=40,multiline=False)
+            #input_box.bind(on_key_down=self.on_key_down)  # Bind key down event
+            layout.add_widget(input_box)
+            self.input_boxes.append(input_box)  # Store each TextInput in the list
 
         # Submit button
-        self.submit_button = Button(
-            text='Submit',
-            size_hint_y=None,
-            height=50,
-            background_color=(0.2, 0.6, 0.2, 1),  # Dark green
-            color=(1, 1, 1, 1),  # White text
-            font_size='16sp',
-            bold=True
-        )
-        self.submit_button.bind(on_press=self.save_inputs)
+        submit_button = Button(text="Submit", size_hint_y=None, height=50)
+        submit_button.bind(on_release=self.on_submit)
+        layout.add_widget(submit_button)
 
-        layout.add_widget(self.submit_button)
-        self.add_widget(layout)
+        scrollview.add_widget(layout)
+        self.add_widget(scrollview)
 
-    def save_inputs(self, instance):
-        # Gather input values from all sections
-        all_inputs = {}
-        for section in self.sections:
-            all_inputs[f'Section {section.children[0].text}'] = section.get_inputs()
+    def on_submit(self, instance):
+        # Retrieve values from all input boxes
+        self.collected_values = [input_box.text.strip() for input_box in self.input_boxes]
+
+        calculated_value_list=self.calculate(self.collected_values)
+
+        self.save_inputs(self.collected_values,calculated_value_list)
+        # Access the ResultScreen and update its label text with labels and collected values
+        result_screen = self.manager.get_screen('result')
+        #result_screen.display_values(self.labels, self.collected_values)
+        result_screen.display_values(calculated_value_list)
+
+        # Switch to ResultScreen
+        self.manager.current = 'result'
+
+    def calculate(self,list_data):
+        final_dataset={}
+        today_total_Sales_kg=(float(list_data[0])+float(list_data[1]))-float(list_data[2])
+
+        final_dataset['total_Sales']=today_total_Sales_kg
+
+        return final_dataset
+
+    def save_inputs(self, input_data,output_data):
+        # Create directory if it doesn't exist
+        if not os.path.exists('kcs_data'):
+            os.makedirs('kcs_data')
 
         # Write to a file
-        with open("input_values.txt", "w") as f:
-            for section, inputs in all_inputs.items():
-                f.write(f'{section}:\n')
-                for input_value in inputs:
-                    f.write(f'  - {input_value}\n')
-                f.write('\n')
+        file_name = f'kcs_data/{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.txt'
+        with open(file_name, "w") as f:
+            f.write(f'Inputs: {input_data}\n')
+            f.write(f'output: {output_data}\n')
 
 class ResultScreen(Screen):
     def __init__(self, **kwargs):
-        super(ResultScreen, self).__init__(**kwargs)
-        self.layout = BoxLayout(orientation='vertical')
-        self.result_label = Label()
-        self.layout.add_widget(self.result_label)
-        self.add_widget(self.layout)
+        super().__init__(**kwargs)
 
-    def update_result(self, total_sales, profit):
-        self.result_label.text = f'Total Sales: {total_sales}\nProfit: {profit}'
+        # Outer layout to hold results and back button separately
+        outer_layout = BoxLayout(orientation='vertical')
+
+        # Scrollable layout for displaying results
+        scrollview = ScrollView(size_hint=(1, 0.9))
+        self.result_layout = GridLayout(cols=1, spacing=10, size_hint_y=None)
+        self.result_layout.bind(minimum_height=self.result_layout.setter('height'))
+        scrollview.add_widget(self.result_layout)
+
+        # Back button to go back to the input screen
+        back_button = Button(text="Back", size_hint=(1, 0.1), height=50)
+        back_button.bind(on_release=self.go_back)
+
+        # Add scrollview and back button to the outer layout
+        outer_layout.add_widget(scrollview)
+        outer_layout.add_widget(back_button)
+        self.add_widget(outer_layout)
+
+    #def display_values(self, labels, values):
+    def display_values(self, output_data):
+        # Clear previous results
+        self.result_layout.clear_widgets()
+
+        # Add "Hello World" label
+        hello_label = Label(text="Total summary for today", size_hint_y=None, height=40)
+        self.result_layout.add_widget(hello_label)
+
+        # Add the current date to the layout
+        date_label = Label(text=f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", size_hint_y=None,height=40)
+        self.result_layout.add_widget(date_label)
+
+        # Add each label and value to the result layout
+        '''
+        for label, value in zip(labels, values):
+            result_label = Label(text=f"{label}: {value}", size_hint_y=None, height=40)
+            self.result_layout.add_widget(result_label)
+        '''
+        for key in output_data:
+            output_result_label=Label(text=f"{key}: {output_data[key]}", size_hint_y=None, height=40)
+            self.result_layout.add_widget(output_result_label)
+
+    def go_back(self, instance):
+        # Switch back to the InputScreen
+        self.manager.current = 'input'
+
 
 class MyApp(App):
     def __init__(self, **kwargs):
         super(MyApp, self).__init__(**kwargs)
-        self.title = "My Collection App"
-
+        self.title = "Kamala Chicken Stores"
     def build(self):
         sm = ScreenManager()
         sm.add_widget(InputScreen(name='input'))
         sm.add_widget(ResultScreen(name='result'))
         return sm
+
 
 if __name__ == '__main__':
     MyApp().run()
